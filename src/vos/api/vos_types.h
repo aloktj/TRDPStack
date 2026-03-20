@@ -43,7 +43,28 @@ extern "C" {
  * DEFINES
  */
 
-#if (defined (WIN32) || defined (WIN64))
+#if defined(TRDP_CUSTOM_VOS)
+
+#include <stdint.h>
+#include "vos_custom_platform.h"
+
+typedef uint8_t UINT8;
+typedef uint16_t UINT16;
+typedef uint32_t UINT32;
+typedef uint64_t UINT64;
+typedef int8_t INT8;
+typedef int16_t INT16;
+typedef int32_t INT32;
+typedef int64_t INT64;
+typedef unsigned char BOOL8;
+typedef unsigned char BITSET8;
+typedef unsigned char ANTIVALENT8;
+typedef char CHAR8;
+typedef uint16_t UTF16;
+typedef float REAL32;
+typedef double REAL64;
+
+#elif (defined (WIN32) || defined (WIN64))
 
 #include <stdint.h>
 

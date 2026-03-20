@@ -1,0 +1,35 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+set(_trdpstack_threads_required "@TRDP_THREADS_REQUIRED@")
+if(_trdpstack_threads_required)
+    find_dependency(Threads)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/TRDPStackTargets.cmake")
+
+set(TRDPStack_trdp_FOUND FALSE)
+set(TRDPStack_trdpap_FOUND FALSE)
+
+if(TARGET TRDP::trdp)
+    set(TRDPStack_trdp_FOUND TRUE)
+endif()
+
+if(TARGET TRDP::trdpap)
+    set(TRDPStack_trdpap_FOUND TRUE)
+endif()
+
+foreach(component IN LISTS TRDPStack_FIND_COMPONENTS)
+    if(NOT component MATCHES "^(trdp|trdpap)$")
+        set(TRDPStack_FOUND FALSE)
+        set(TRDPStack_NOT_FOUND_MESSAGE
+            "Unsupported TRDPStack component: ${component}. Supported components are: trdp, trdpap.")
+    elseif(NOT TARGET TRDP::${component})
+        set(TRDPStack_FOUND FALSE)
+        set(TRDPStack_NOT_FOUND_MESSAGE
+            "TRDPStack component ${component} is not available in this installation.")
+    endif()
+endforeach()
+
+check_required_components(TRDPStack)
