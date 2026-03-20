@@ -61,6 +61,8 @@
 #elif defined(POSIX)
 #include <sys/select.h>
 #include <netinet/in.h>
+#elif defined(TRDP_CUSTOM_VOS)
+#include "vos_custom_platform.h"
 #elif defined(ESP32)
 #include "lwip/sockets.h"
 #endif

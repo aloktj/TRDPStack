@@ -1,0 +1,6 @@
+/bld/
+/config/config.mk
+/build/
+/cmake-build*/
+test_package/build/
+test_package/CMakeUserPresets.json
