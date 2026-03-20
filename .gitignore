@@ -1,0 +1,4 @@
+/bld/
+/config/config.mk
+/build/
+/cmake-build*/
