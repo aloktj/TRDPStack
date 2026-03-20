@@ -1,0 +1,85 @@
+stages:
+  - verify
+  - package
+  - publish
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  CONAN_HOME: "$CI_PROJECT_DIR/.conan2"
+  CONAN_NON_INTERACTIVE: "1"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  CMAKE_BUILD_PARALLEL_LEVEL: "4"
+  CONAN_REMOTE_NAME: "artifactory"
+  # Example for Artifactory: http://192.168.56.100:8081/artifactory/api/conan/<repo>
+  CONAN_REMOTE_URL: ""
+
+.default_wsl_job: &default_wsl_job
+  tags:
+    - wsl
+  before_script:
+    - python3 --version
+    - cmake --version
+    - python3 -m venv .venv
+    - . .venv/bin/activate
+    - python -m pip install --upgrade pip
+    - python -m pip install conan
+    - export PATH="$CI_PROJECT_DIR/.venv/bin:$PATH"
+    - conan profile detect --force
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .venv/
+      - .cache/pip/
+      - .conan2/
+
+cmake-posix:
+  stage: verify
+  <<: *default_wsl_job
+  script:
+    - . .venv/bin/activate
+    - conan install . --output-folder build/conan-posix --build=missing -s build_type=Release
+    - TOOLCHAIN_FILE=$(find "$CI_PROJECT_DIR/build/conan-posix" -name conan_toolchain.cmake -print -quit)
+    - test -n "$TOOLCHAIN_FILE"
+    - cmake -S . -B build/cmake-posix -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE"
+    - cmake --build build/cmake-posix --parallel
+  artifacts:
+    when: always
+    paths:
+      - build/conan-posix/
+      - build/cmake-posix/
+    expire_in: 1 week
+
+conan-create-posix:
+  stage: package
+  <<: *default_wsl_job
+  needs:
+    - cmake-posix
+  script:
+    - . .venv/bin/activate
+    - conan create . --build=missing
+
+conan-create-custom:
+  stage: package
+  <<: *default_wsl_job
+  script:
+    - . .venv/bin/activate
+    - conan create . -o '&:vos_backend=custom' -tf=''
+
+conan-upload:
+  stage: publish
+  <<: *default_wsl_job
+  needs:
+    - conan-create-posix
+    - conan-create-custom
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CONAN_REMOTE_URL != ""'
+      when: manual
+    - when: never
+  script:
+    - . .venv/bin/activate
+    - conan remote add "$CONAN_REMOTE_NAME" "$CONAN_REMOTE_URL" --force
+    - |
+      if [ -n "$CONAN_REMOTE_USER" ] && [ -n "$CONAN_REMOTE_PASSWORD" ]; then
+        conan remote login "$CONAN_REMOTE_NAME" "$CONAN_REMOTE_USER" --password "$CONAN_REMOTE_PASSWORD"
+      fi
+    - conan upload "trdpstack/0.1.0" -r "$CONAN_REMOTE_NAME" --confirm --all
